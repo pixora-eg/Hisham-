@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#a75c7e">
+<title>Hisham Creation</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#faf5f7;color:#38232d;font-family:Arial,sans-serif}
+:root{--pink:#b66b8b;--light:#f4e3eb;--white:#fff;--dark:#38232d}
+header{background:linear-gradient(135deg,#a75c7e,#d6a1b8);padding:35px 20px;text-align:center;color:white;border-radius:0 0 30px 30px}
+header h1{margin:0;font-size:32px;letter-spacing:1px}
+header p{margin:10px 0 0}
+.container{max-width:720px;margin:auto;padding:15px}
+.card{background:white;border-radius:20px;padding:18px;margin:15px 0;box-shadow:0 4px 18px #59253c12}
+h2{color:var(--pink)}
+input,select,textarea{width:100%;padding:13px;margin:7px 0;border-radius:12px;border:1px solid #ead5df;background:#fff;color:#38232d;font-size:16px}
+button{padding:13px;border:0;border-radius:13px;background:var(--pink);color:white;font-size:16px;font-weight:bold;cursor:pointer;width:100%;margin:6px 0}
+.secondary{background:var(--light);color:var(--dark)}
+.service{border:1px solid #efdce5;border-radius:16px;padding:14px;margin:10px 0;cursor:pointer}
+.service.selected{border:2px solid var(--pink);background:#fff5f9}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tab{background:#f1e2e9;color:#38232d}
+.tab.active{background:var(--pink);color:white}
+.hidden{display:none!important}
+.item{background:#fff8fb;border:1px solid #efdce5;padding:13px;border-radius:15px;margin:10px 0}
+.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#f1dce6;color:#713c56;font-size:13px}
+footer{text-align:center;padding:30px;color:#936a7e}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Hisham Creation</h1>
+<p>جمالك يبدأ من هنا ♡</p>
+</header>
+
+<div class="container">
+
+<section id="register" class="card">
+<h2>أهلاً بكِ ♡</h2>
+<p>سجلي بياناتك مرة واحدة لبدء الحجز.</p>
+<input id="customerName" placeholder="اسمك" autocomplete="name">
+<input id="customerPhone" placeholder="رقم التليفون" inputmode="tel" autocomplete="tel">
+<button onclick="registerCustomer()">دخول</button>
+</section>
+
+<div id="app" class="hidden">
+<div class="card">
+<h2 id="welcomeText">أهلاً بكِ في Hisham Creation</h2>
+<p id="profileText"></p>
+<button class="secondary" onclick="logoutCustomer()">تغيير الحساب</button>
+</div>
+
+<div class="tabs">
+<button class="tab active" onclick="openTab('book',this)">حجز جديد</button>
+<button class="tab" onclick="openTab('mybookings',this)">حجوزاتي</button>
+</div>
+
+<section id="book" class="card">
+<h2>اختاري الخدمة</h2>
+<div id="services"></div>
+
+<h2>اختاري الموظفة</h2>
+<select id="staffSelect">
+<option value="">أي موظفة متاحة</option>
+</select>
+
+<h2>موعدك</h2>
+<input type="date" id="date">
+<select id="time">
+<option value="">اختاري الوقت</option>
+</select>
+
+<textarea id="notes" placeholder="ملاحظات (اختياري)"></textarea>
+<button onclick="bookAppointment()">تأكيد الحجز</button>
+</section>
+
+<section id="mybookings" class="card hidden">
+<h2>حجوزاتي</h2>
+<div id="bookingHistory"></div>
+</section>
+
+<section class="card">
+<h2>تواصلي معنا</h2>
+<p id="contactText">يسعدنا تواصلكِ معنا.</p>
+<button class="secondary" onclick="contactSalon()">اتصال بالصالون</button>
+</section>
+</div>
+
+</div>
+<footer>Hisham Creation ♡</footer>
+
+<script>
+const DBKEY="HISHAM_CREATION_NEW_V1";
+const PROFILEKEY="HC_CUSTOMER_PROFILE_V1";
+
+let db=JSON.parse(localStorage.getItem(DBKEY)||"null")||{
+ services:[
+ {id:1,name:"قص الشعر",price:150,duration:30,coins:5},
+ {id:2,name:"صبغة الشعر",price:500,duration:120,coins:15},
+ {id:3,name:"استشوار",price:150,duration:45,coins:5},
+ {id:4,name:"مكياج",price:600,duration:90,coins:20},
+ {id:5,name:"مانيكير",price:150,duration:45,coins:5},
+ {id:6,name:"باديكير",price:200,duration:60,coins:8}
+ ],
+ staff:["أي موظفة متاحة"],
+ bookings:[],
+ settings:{welcome:"أهلاً بكِ في Hisham Creation",contact:"",start:"10:00",end:"22:00",slot:30},
+ closed:[]
+};
+
+let customer=JSON.parse(localStorage.getItem(PROFILEKEY)||"null");
+let selectedService=null;
+
+function saveDB(){
+ localStorage.setItem(DBKEY,JSON.stringify(db));
+}
+
+function registerCustomer(){
+ let n=document.getElementById("customerName").value.trim();
+ let p=document.getElementById("customerPhone").value.trim();
+ if(!n||!p)return alert("اكتبي الاسم ورقم التليفون");
+ customer={name:n,phone:p};
+ localStorage.setItem(PROFILEKEY,JSON.stringify(customer));
+ startApp();
+}
+
+function logoutCustomer(){
+ if(confirm("هل تريدين تغيير الحساب؟")){
+ localStorage.removeItem(PROFILEKEY);
+ customer=null;
+ location.reload();
+ }
+}
+
+function startApp(){
+ if(!customer)return;
+ document.getElementById("register").classList.add("hidden");
+ document.getElementById("app").classList.remove("hidden");
+ document.getElementById("welcomeText").textContent=db.settings.welcome||"أهلاً بكِ";
+ document.getElementById("profileText").textContent="أهلاً "+customer.name;
+ document.getElementById("contactText").textContent=db.settings.contact||"يسعدنا تواصلكِ معنا.";
+ renderServices();
+ renderStaff();
+ renderHistory();
+ setupDate();
+}
+
+function renderServices(){
+ const el=document.getElementById("services");
+ el.innerHTML=db.services.map(s=>`
+ <div class="service ${selectedService==s.id?'selected':''}" onclick="selectService(${s.id})">
+ <b>${escapeHTML(s.name)}</b>
+ <p>${s.price} جنيه</p>
+ <small>${s.duration} دقيقة — ${s.coins} كوينز</small>
+ </div>`).join("")||"<p>لا توجد خدمات متاحة حالياً.</p>";
+}
+
+function selectService(id){
+ selectedService=id;
+ renderServices();
+}
+
+function renderStaff(){
+ let list=db.staff.length?db.staff:["أي موظفة متاحة"];
+ staffSelect.innerHTML=list.map(s=>`<option>${escapeHTML(s)}</option>`).join("");
+}
+
+function setupDate(){
+ let today=new Date();
+ let localDate=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+ date.min=localDate;
+ date.value=localDate;
+ date.addEventListener("change",renderTimes);
+ renderTimes();
+}
+
+function renderTimes(){
+ let d=date.value;
+ let start=db.settings.start||"10:00";
+ let end=db.settings.end||"22:00";
+ let step=Number(db.settings.slot||30);
+ let options=[];
+ if(!d)return;
+ if(db.closed.includes(d)){
+  time.innerHTML='<option value="">الصالون مغلق في هذا اليوم</option>';
+  return;
+ }
+ let [sh,sm]=start.split(":").map(Number);
+ let [eh,em]=end.split(":").map(Number);
+ let a=sh*60+sm,b=eh*60+em;
+ let today=new Date().toISOString().slice(0,10);
+ let now=new Date();
+ let nowMinutes=now.getHours()*60+now.getMinutes();
+
+ for(let t=a;t<b;t+=step){
+  let hh=String(Math.floor(t/60)).padStart(2,"0");
+  let mm=String(t%60).padStart(2,"0");
+  let value=hh+":"+mm;
+  let booked=db.bookings.some(x=>x.date===d&&x.time===value&&x.status!=="ملغي");
+  if(booked)continue;
+  if(d===today&&t<=nowMinutes)continue;
+  options.push(value);
+ }
+ time.innerHTML=options.length?
+ '<option value="">اختاري الوقت</option>'+options.map(x=>`<option>${x}</option>`).join("") :
+ '<option value="">لا توجد مواعيد متاحة</option>';
+}
+
+function bookAppointment(){
+ if(!customer)return;
+ let s=db.services.find(x=>x.id===selectedService);
+ if(!s)return alert("اختاري الخدمة");
+ let d=date.value,t=time.value;
+ if(!d||!t)return alert("اختاري التاريخ والوقت");
+ if(db.closed.includes(d))return alert("الصالون مغلق في هذا اليوم");
+ if(db.bookings.some(x=>x.date===d&&x.time===t&&x.status!=="ملغي"))return alert("هذا الموعد تم حجزه");
+
+ let booking={
+ id:Date.now(),
+ name:customer.name,
+ phone:customer.phone,
+ service:s.name,
+ serviceId:s.id,
+ price:s.price,
+ duration:s.duration,
+ coins:s.coins,
+ staff:staffSelect.value,
+ date:d,
+ time:t,
+ notes:notes.value,
+ status:"جديد",
+ createdAt:new Date().toISOString()
+ };
+
+ db.bookings.push(booking);
+ saveDB();
+ notes.value="";
+ alert("تم تسجيل حجزكِ ♡");
+ renderHistory();
+ renderTimes();
+ openTab("mybookings",document.querySelectorAll(".tab")[1]);
+}
+
+function renderHistory(){
+ let list=db.bookings.filter(x=>x.phone===customer.phone).sort((a,b)=>b.id-a.id);
+ bookingHistory.innerHTML=list.length?list.map(b=>`
+ <div class="item">
+ <b>${escapeHTML(b.service)}</b>
+ <p>${escapeHTML(b.date)} — ${escapeHTML(b.time)}</p>
+ <p>${b.price} جنيه</p>
+ <p><span class="badge">${escapeHTML(b.status)}</span></p>
+ ${b.status==="جديد"||b.status==="مؤكد"?`<button class="secondary" onclick="cancelBooking(${b.id})">إلغاء الحجز</button>`:""}
+ </div>`).join(""):"<p>لا توجد حجوزات.</p>";
+}
+
+function cancelBooking(id){
+ let b=db.bookings.find(x=>x.id===id);
+ if(!b)return;
+ if(confirm("إلغاء الحجز؟")){
+  b.status="ملغي";
+  saveDB();
+  renderHistory();
+  renderTimes();
+ }
+}
+
+function openTab(id,btn){
+ document.getElementById("book").classList.toggle("hidden",id!=="book");
+ document.getElementById("mybookings").classList.toggle("hidden",id!=="mybookings");
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+ if(btn)btn.classList.add("active");
+ if(id==="mybookings")renderHistory();
+}
+
+function contactSalon(){
+ let p=db.settings.contact||"";
+ if(p)location.href="tel:"+p;
+ else alert("رقم التواصل غير متاح حالياً");
+}
+
+function escapeHTML(v){
+ return String(v??"").replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;',"\'":"&#39;"
+ }[c]));
+}
+
+if(customer)startApp();
+saveDB();
+</script>
+</body>
+  </html>
+  
